@@ -40,39 +40,25 @@ object FcmNotificationManager {
     private val scope = CoroutineScope(Dispatchers.IO)
 
     /**
-     * Ensures FirebaseApp is safely initialized even if google-services.json is absent.
+     * Ensures FirebaseApp is safely initialized when google-services.json is present.
      */
     fun ensureFirebaseInitialized(context: Context): Boolean {
         return runCatching {
             if (FirebaseApp.getApps(context).isEmpty()) {
-                val app = runCatching {
-                    FirebaseApp.initializeApp(context)
-                }.getOrNull()
-
-                if (app == null) {
-                    val options = FirebaseOptions.Builder()
-                        .setApplicationId(context.packageName)
-                        .setProjectId("fish-garden-bvaq")
-                        .setApiKey("AIzaSyDummyFallbackKeyForOfflineDev12345")
-                        .build()
-                    FirebaseApp.initializeApp(context, options)
-                }
+                FirebaseApp.initializeApp(context)
             }
             FirebaseApp.getApps(context).isNotEmpty()
-        }.getOrElse { e ->
-            Log.w(TAG, "FirebaseApp initialization fallback: ${e.message}")
-            false
-        }
+        }.getOrDefault(false)
     }
 
     fun isFirebaseInitialized(): Boolean {
-        return runCatching { FirebaseApp.getInstance() != null }.getOrDefault(false)
+        return runCatching { FirebaseApp.getApps(com.google.firebase.FirebaseApp.getInstance().applicationContext).isNotEmpty() }.getOrDefault(false)
     }
 
     private var isCloudMessagingAvailable: Boolean = false
 
     /**
-     * Initializes FCM, fetches registration token and registers notification channels.
+     * Initializes FCM, registers notification channels, and sets up high-reliability notification dispatching.
      */
     fun initialize(context: Context) {
         NotificationHelper.createNotificationChannels(context)
