@@ -1,0 +1,6 @@
+{
+  "name": "Fish Garden",
+  "description": "Fish Garden Aquarium Store & Gallery App with customer phone login, order placement, gallery management (add/edit/delete), and live admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
