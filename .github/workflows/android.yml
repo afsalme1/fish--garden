@@ -22,33 +22,45 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | sdkmanager --licenses || true
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
 
-      - name: Setup Environment & Keystore
+      - name: Configure Build Environment
         run: |
-          # Generate/Decode debug keystore for APK signing
-          if [ -f "debug.keystore.base64" ]; then
-            base64 -d debug.keystore.base64 > debug.keystore
-          else
-            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          # 1. Configure local.properties for CI runner
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-          # Ensure .env exists for Secrets Gradle plugin
+          # 2. Configure .env for Secrets Gradle Plugin
           touch .env
           if [ -f ".env.example" ]; then
             cp .env.example .env
           fi
 
+          # 3. Ensure valid debug.keystore exists for debugConfig signing
+          if [ -f "debug.keystore.base64" ]; then
+            (base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null) || (base64 --decode debug.keystore.base64 > debug.keystore 2>/dev/null) || true
+          fi
+          if [ ! -s "debug.keystore" ]; then
+            keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace --no-daemon
+        run: |
+          gradle assembleDebug --stacktrace --no-daemon
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
-        if: always()
+        if: success()
         with:
-          name: fish-garden-debug-apk
+          name: FishGarden-Debug-APK
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
